@@ -1,0 +1,5 @@
+# Test-only dependencies. Kept OUT of requirements.txt so they never ship in
+# the production Docker image (smaller image, less attack surface).
+-r requirements.txt
+pytest==8.3.4
+httpx==0.28.1
