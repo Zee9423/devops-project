@@ -1,0 +1,18 @@
+# A Service gives the Pods one stable address and load-balances across them.
+# type: LoadBalancer makes AKS provision a real Azure Load Balancer with a
+# public IP, so the API is reachable from the internet — the payoff of the
+# whole project.
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastapi-aks-api
+  labels:
+    app: fastapi-aks-api
+spec:
+  type: LoadBalancer
+  selector:
+    app: fastapi-aks-api # routes to Pods with this label (from the Deployment)
+  ports:
+    - name: http
+      port: 80 # public port on the load balancer
+      targetPort: 8000 # container port the app listens on

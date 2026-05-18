@@ -1,0 +1,55 @@
+# A Deployment tells Kubernetes to keep N identical Pods running and handles
+# rolling updates when we ship a new image (Phase 5 just changes the image tag).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-aks-api
+  labels:
+    app: fastapi-aks-api
+spec:
+  # 2 replicas: demonstrates load-balancing and zero-downtime rolling updates
+  # even though the app is tiny. Fits comfortably on the single B2s_v2 node.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fastapi-aks-api
+  template:
+    metadata:
+      labels:
+        app: fastapi-aks-api
+    spec:
+      containers:
+        - name: api
+          # Image lives in our private ACR. AKS pulls it with the AcrPull role
+          # Terraform granted to the cluster identity — no imagePullSecrets.
+          # __IMAGE__ is a placeholder the CI pipeline replaces with the real
+          # ACR login server + immutable git-SHA tag at deploy time. (For a
+          # manual deploy, substitute it yourself or use `kubectl set image`.)
+          image: __IMAGE__
+          ports:
+            - containerPort: 8000
+          # Resource requests/limits: requests help the scheduler place the Pod;
+          # limits stop a runaway container starving the node. Small values
+          # because the app is light and the node is small.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          # Liveness: if /health stops responding, kill & restart the container.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          # Readiness: don't send traffic to the Pod until /health is OK. This
+          # is what makes rolling updates zero-downtime.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
